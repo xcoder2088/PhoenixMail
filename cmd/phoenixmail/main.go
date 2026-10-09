@@ -573,7 +573,11 @@ func (a *App) mailsHandler(w http.ResponseWriter, r *http.Request) {
 		folder = "inbox"
 	}
 	if r.Method == http.MethodGet {
-		writeJSON(w, 200, map[string]any{"mails": a.list(folder, r.URL.Query().Get("q")), "counts": a.counts()})
+		accountID := strings.TrimSpace(r.URL.Query().Get("account"))
+		writeJSON(w, 200, map[string]any{
+			"mails":  a.listForAccount(folder, r.URL.Query().Get("q"), accountID),
+			"counts": a.countsForAccount(accountID),
+		})
 		return
 	}
 	if r.Method != http.MethodPost {
@@ -1488,7 +1492,7 @@ func main() {
 		writeJSON(w, http.StatusOK, systemAppearance())
 	})
 	mux.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"ok": true, "app": "PhoenixMail", "version": "0.3.3-oauth-modal-branding"})
+		writeJSON(w, 200, map[string]any{"ok": true, "app": "PhoenixMail", "version": "0.3.5-responsive-layout"})
 	})
 	mux.HandleFunc("/api/mails", app.mailsHandler)
 	mux.HandleFunc("/api/mails/", app.mailAction)
@@ -1506,6 +1510,7 @@ func main() {
 	mux.HandleFunc("/api/autoconfig", app.autoconfigHandler)
 	mux.HandleFunc("/api/accounts", app.accountsHandler)
 	mux.HandleFunc("/api/accounts/test", app.accountTestHandler)
+	mux.HandleFunc("/api/accounts/refresh", app.accountRefreshHandler)
 	mux.HandleFunc("/oauth/microsoft/start", app.microsoftOAuthStart)
 	mux.HandleFunc("/oauth/microsoft/callback", app.microsoftOAuthCallback)
 	mux.HandleFunc("/api/oauth/microsoft/status", app.microsoftOAuthStatus)
@@ -1520,7 +1525,7 @@ func main() {
 		}
 		staticHandler.ServeHTTP(w, r)
 	})
-	log.Printf("PhoenixMail v0.3.2 listening on http://localhost:%s", port)
+	log.Printf("PhoenixMail v0.3.5 responsive inbox layout listening on http://localhost:%s", port)
 	log.Printf("Data: %s", dataPath())
 	log.Fatal(http.ListenAndServe(":"+port, logging(mux)))
 }

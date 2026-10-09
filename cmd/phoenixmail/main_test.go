@@ -1,7 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -193,5 +198,158 @@ func TestOAuthRefreshTokenPersistsAcrossAppRestart(t *testing.T) {
 	b.oauthMu.Unlock()
 	if tok == nil || tok.RefreshToken != "refresh-token-test" {
 		t.Fatalf("OAuth refresh token was not restored: %#v", tok)
+	}
+}
+
+func TestParseIMAPMailDecodesMIMEHeadersAndBody(t *testing.T) {
+	account := MailAccount{ID: "outlook-test", Email: "user@outlook.com"}
+	raw := "From: =?UTF-8?Q?Ren=C3=A9?= <rene@example.com>\r\n" +
+		"To: user@outlook.com\r\n" +
+		"Subject: =?UTF-8?Q?Bonjour_caf=C3=A9?=\r\n" +
+		"Date: Fri, 09 Oct 2026 09:15:00 -0400\r\n" +
+		"MIME-Version: 1.0\r\n" +
+		"Content-Type: text/plain; charset=UTF-8\r\n" +
+		"Content-Transfer-Encoding: quoted-printable\r\n\r\n" +
+		"Bonjour caf=C3=A9!\r\n"
+	m, err := parseIMAPMail(account, 23, `* 1 FETCH (UID 23 FLAGS (\\Seen) BODY[] {1})`, []byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.From != "René" || m.Email != "rene@example.com" {
+		t.Fatalf("unexpected sender parse: from=%q email=%q", m.From, m.Email)
+	}
+	if m.Subject != "Bonjour café" || m.Body != "Bonjour café!" {
+		t.Fatalf("unexpected decoded message: subject=%q body=%q", m.Subject, m.Body)
+	}
+	if m.AccountID != account.ID || m.ID != "imap-outlook-test-0000000023" || m.Folder != "inbox" || !m.Read {
+		t.Fatalf("unexpected message metadata: %+v", m)
+	}
+}
+
+func TestAccountRefreshIMAPEndToEndWithLocalServer(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	port := listener.Addr().(*net.TCPAddr).Port
+	message := "From: Test Sender <sender@example.com>\r\n" +
+		"To: user@example.com\r\n" +
+		"Subject: First real sync\r\n" +
+		"Date: Fri, 09 Oct 2026 09:15:00 -0400\r\n" +
+		"Content-Type: text/plain; charset=UTF-8\r\n\r\n" +
+		"Message fetched by IMAP.\r\n"
+	serverErr := make(chan error, 2)
+	go func() {
+		for session := 0; session < 2; session++ {
+			conn, err := listener.Accept()
+			if err != nil {
+				serverErr <- err
+				return
+			}
+			func() {
+				defer conn.Close()
+				reader := bufio.NewReader(conn)
+				if _, err := fmt.Fprint(conn, "* OK local test server ready\r\n"); err != nil {
+					serverErr <- err
+					return
+				}
+				for {
+					line, err := reader.ReadString('\n')
+					if err != nil {
+						if errors.Is(err, io.EOF) {
+							serverErr <- nil
+						} else {
+							serverErr <- err
+						}
+						return
+					}
+					line = strings.TrimSpace(line)
+					space := strings.IndexByte(line, ' ')
+					if space < 0 {
+						serverErr <- fmt.Errorf("invalid IMAP test command %q", line)
+						return
+					}
+					tag, command := line[:space], line[space+1:]
+					switch {
+					case strings.HasPrefix(strings.ToUpper(command), "LOGIN "):
+						_, err = fmt.Fprintf(conn, "%s OK logged in\r\n", tag)
+					case strings.EqualFold(command, "SELECT INBOX"):
+						_, err = fmt.Fprintf(conn, "* 1 EXISTS\r\n* OK [UIDVALIDITY 7] selected\r\n%s OK selected\r\n", tag)
+					case strings.EqualFold(command, "UID SEARCH ALL"):
+						_, err = fmt.Fprintf(conn, "* SEARCH 23\r\n%s OK search done\r\n", tag)
+					case strings.HasPrefix(strings.ToUpper(command), "UID FETCH "):
+						_, err = fmt.Fprintf(conn, "* 1 FETCH (UID 23 FLAGS (\\Seen) BODY[] {%d}\r\n", len(message))
+						if err == nil {
+							_, err = io.WriteString(conn, message)
+						}
+						if err == nil {
+							_, err = fmt.Fprintf(conn, ")\r\n%s OK fetch done\r\n", tag)
+						}
+					default:
+						err = fmt.Errorf("unexpected IMAP command %q", command)
+					}
+					if err != nil {
+						serverErr <- err
+						return
+					}
+				}
+			}()
+		}
+	}()
+
+	path := filepath.Join(t.TempDir(), "data.json")
+	a := NewApp(path)
+	a.mu.Lock()
+	a.data.Config.Accounts = []MailAccount{{ID: "test-account", Email: "user@example.com", IMAP: IMAPConfig{Host: "127.0.0.1", Port: port, Security: "plain", Username: "user@example.com"}}}
+	a.data.Config.DefaultAccount = "test-account"
+	a.accountPasswords["test-account:imap"] = "test-password"
+	a.mu.Unlock()
+	result, err := a.refreshAccountInbox("test-account")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["newMessages"] != 1 || result["fetched"] != 1 {
+		t.Fatalf("unexpected refresh response: %#v", result)
+	}
+	mails := a.listForAccount("inbox", "", "test-account")
+	if len(mails) != 1 || mails[0].Subject != "First real sync" || mails[0].Body != "Message fetched by IMAP." {
+		t.Fatalf("unexpected synced mails: %#v", mails)
+	}
+
+	// Re-fetching the same IMAP UID must refresh the existing local row without
+	// increasing the mailbox count or reporting a duplicate as a new message.
+	second, err := a.refreshAccountInbox("test-account")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second["newMessages"] != 0 || second["fetched"] != 1 {
+		t.Fatalf("repeated sync should report zero new and one fetched message, got %#v", second)
+	}
+	mails = a.listForAccount("inbox", "", "test-account")
+	if len(mails) != 1 {
+		t.Fatalf("repeated sync created a duplicate; mailbox contains %d messages", len(mails))
+	}
+	for i := 0; i < 2; i++ {
+		if err := <-serverErr; err != nil && !strings.Contains(err.Error(), "closed network connection") {
+			t.Fatalf("fake IMAP server failed: %v", err)
+		}
+	}
+}
+
+func TestListForAccountSeparatesMessagesAndCounts(t *testing.T) {
+	a := NewApp(filepath.Join(t.TempDir(), "data.json"))
+	a.mu.Lock()
+	a.data.Mails = []Mail{
+		{ID: "a", AccountID: "one", Folder: "inbox", Read: false},
+		{ID: "b", AccountID: "two", Folder: "inbox", Read: true},
+	}
+	a.mu.Unlock()
+	if got := a.listForAccount("inbox", "", "one"); len(got) != 1 || got[0].ID != "a" {
+		t.Fatalf("unexpected account-scoped list: %#v", got)
+	}
+	counts := a.countsForAccount("one")
+	if counts["inbox"] != 1 || counts["unread"] != 1 {
+		t.Fatalf("unexpected account-scoped counts: %#v", counts)
 	}
 }

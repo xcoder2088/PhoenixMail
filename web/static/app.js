@@ -31,7 +31,8 @@ const icon=n=>{
     list:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>',
     spark:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5Z"/><path d="m19 15 .7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7Z"/></svg>',
     mic:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>',
-    globe:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4a12 12 0 0 1 0 16M12 4a12 12 0 0 0 0 16"/></svg>'
+    globe:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4a12 12 0 0 1 0 16M12 4a12 12 0 0 0 0 16"/></svg>',
+    refresh:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>'
   }; return `<span class="ui-icon">${p[n]||p.more}</span>`;
 };
 app.innerHTML=`
@@ -56,12 +57,12 @@ app.innerHTML=`
     <button class="settings">${icon('settings')}<span>Paramètres</span></button>
   </aside>
   <section class="mail-list-panel">
-    <header class="topbar"><div class="search-wrap">${icon('search')}<input id="search" placeholder="Rechercher dans les courriels..."></div><button class="filter">${icon('filter')}</button></header>
+    <header class="topbar"><div class="search-wrap">${icon('search')}<input id="search" placeholder="Rechercher dans les courriels..."></div><button class="refresh-mail" id="refresh-mail" title="Actualiser la boîte de réception" aria-label="Actualiser la boîte de réception">${icon('refresh')}</button><span class="sync-status" id="sync-status" role="status" aria-live="polite"></span><button class="filter" title="Filtrer les courriels" aria-label="Filtrer les courriels">${icon('filter')}</button></header>
     <div class="list-tabs"><button class="active">Tous</button><button>Non lus</button><button>Avec pièce jointe</button></div>
     <div class="list-title"><h1 id="folder-title">Inbox</h1><span id="folder-count">0</span></div>
     <div id="mail-list"></div>
   </section>
-  <div class="pane-resizer" id="pane-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionner la liste des courriels"></div>
+  <div class="pane-resizer" id="pane-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionner la liste des courriels" aria-valuemin="300" aria-valuemax="760" aria-valuenow="468" aria-controls="mail-list reader" tabindex="0" title="Glisser pour redimensionner · Double-cliquer pour réinitialiser"></div>
   <main class="reader" id="reader"><div class="reader-empty"><img src="brand/icon-256.png"><h2>Sélectionne un courriel</h2><p>Choisis un message pour l'afficher.</p></div></main>
 </div>
 <div class="composer" id="composer">
@@ -118,10 +119,10 @@ function composeFromMessage(mode,id){const m=state.mails.find(v=>v.ID===id);if(!
 document.addEventListener('click',e=>{if(contextMenu&&!contextMenu.hidden&&!contextMenu.contains(e.target))closeMessageContextMenu()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&contextMenu&&!contextMenu.hidden){closeMessageContextMenu();return}});
 contextMenu?.addEventListener('click',async e=>{const move=e.target.closest('[data-move-folder]');if(move){e.preventDefault();await contextMove(move.dataset.moveFolder);return}const b=e.target.closest('[data-context-action]');if(!b)return;e.preventDefault();const action=b.dataset.contextAction;const id=contextMenu.dataset.id;const m=state.mails.find(v=>v.ID===id);if(!m)return;switch(action){case'read':closeMessageContextMenu();await historyAction(m.Read?'unread':'read',id);break;case'reply':composeFromMessage('reply',id);break;case'reply-all':composeFromMessage('reply-all',id);break;case'forward':composeFromMessage('forward',id);break;case'archive':closeMessageContextMenu();await historyAction('archive',id);break;case'trash':closeMessageContextMenu();await historyAction('trash',id);break;case'important':closeMessageContextMenu();await historyAction('important',id);break;case'print':closeMessageContextMenu();openMail(id);setTimeout(()=>window.print(),0);break;case'move-menu':e.stopPropagation();contextMenu.querySelector('.context-submenu-wrap')?.classList.toggle('open');break}});
-function openMail(id){state.selected=id;const m=state.mails.find(x=>x.ID===id);if(!m)return;m.Read=true;render();fetch(`/api/mails/${encodeURIComponent(id)}/read`,{method:'POST'});reader.innerHTML=`<div class="reader-toolbar"><button onclick="readerBack()">${icon('back')}</button><button onclick="readerForward()">${icon('forward')}</button><button onclick="historyAction('archive')">${icon('archive')}</button><button onclick="historyAction('trash')">${icon('trash')}</button><button>${icon('folder')}</button><button>${icon('tag')}</button><button>${icon('more')}</button><div></div><button onclick="historyAction('star')" class="star ${m.Starred?'on':''}">${icon('star')}</button><button>${icon('more')}</button></div><article class="message"><div class="message-head"><h1>${esc(m.Subject)}</h1><div class="sender-line">${avatar(m)}<div><strong>${esc(m.From)}</strong> &lt;${esc(m.Email)}&gt;<br><span>À : moi⌄</span></div><time>Aujourd'hui ${esc(m.Time)}</time></div></div><div class="message-body">${esc(m.Body)}</div></article>`}
-window.readerBack=()=>{state.selected=null;reader.innerHTML=`<div class="reader-empty"><img src="brand/icon-256.png"><h2>Sélectionne un courriel</h2><p>Choisis un message pour l’afficher.</p></div>`};window.readerForward=()=>{};window.historyAction=async(action,id)=>{const targetId=id||state.selected;if(!targetId)return false;const r=await fetch(`/api/mails/${encodeURIComponent(targetId)}/${action}`,{method:'POST'});if(!r.ok){console.error('PhoenixMail action failed',action,r.status,await r.text());return false}if(action==='trash'&&state.selected===targetId){state.selected=null;reader.innerHTML=`<div class="reader-empty"><img src="brand/icon-256.png"><h2>Sélectionne un courriel</h2><p>Choisis un message pour l’afficher.</p></div>`}await load();return true}
+function openMail(id){state.selected=id;const m=state.mails.find(x=>x.ID===id);if(!m)return;m.Read=true;if(window.matchMedia('(max-width: 940px)').matches)reader.classList.add('open');render();fetch(`/api/mails/${encodeURIComponent(id)}/read`,{method:'POST'});reader.innerHTML=`<div class="reader-toolbar"><button onclick="readerBack()">${icon('back')}</button><button onclick="readerForward()">${icon('forward')}</button><button onclick="historyAction('archive')">${icon('archive')}</button><button onclick="historyAction('trash')">${icon('trash')}</button><button>${icon('folder')}</button><button>${icon('tag')}</button><button>${icon('more')}</button><div></div><button onclick="historyAction('star')" class="star ${m.Starred?'on':''}">${icon('star')}</button><button>${icon('more')}</button></div><article class="message"><div class="message-head"><h1>${esc(m.Subject)}</h1><div class="sender-line">${avatar(m)}<div><strong>${esc(m.From)}</strong> &lt;${esc(m.Email)}&gt;<br><span>À : moi⌄</span></div><time>Aujourd'hui ${esc(m.Time)}</time></div></div><div class="message-body">${esc(m.Body)}</div></article>`}
+window.readerBack=()=>{state.selected=null;reader.classList.remove('open');reader.innerHTML=`<div class="reader-empty"><img src="brand/icon-256.png"><h2>Sélectionne un courriel</h2><p>Choisis un message pour l’afficher.</p></div>`};window.readerForward=()=>{};window.historyAction=async(action,id)=>{const targetId=id||state.selected;if(!targetId)return false;const r=await fetch(`/api/mails/${encodeURIComponent(targetId)}/${action}`,{method:'POST'});if(!r.ok){console.error('PhoenixMail action failed',action,r.status,await r.text());return false}if(action==='trash'&&state.selected===targetId){state.selected=null;reader.innerHTML=`<div class="reader-empty"><img src="brand/icon-256.png"><h2>Sélectionne un courriel</h2><p>Choisis un message pour l’afficher.</p></div>`}await load();return true}
 document.addEventListener('keydown',e=>{if(e.key!=='Delete'||e.defaultPrevented)return;const t=e.target;if(t&&((t.tagName==='INPUT')||(t.tagName==='TEXTAREA')||(t.isContentEditable)))return;if(state.selected){e.preventDefault();historyAction('trash')}})
-async function load(){const q=document.querySelector('#search').value.trim();const seq=++state.searchSeq;const folder=q?'all':state.folder;const r=await fetch(`/api/mails?folder=${encodeURIComponent(folder)}&q=${encodeURIComponent(q)}`);if(seq!==state.searchSeq)return;const data=await r.json();state.mails=(data.mails||[]).map(normalizeMail);state.counts=data.counts||{};document.querySelector('#folder-title').textContent=q?'Recherche':({inbox:'Inbox',important:'Important',drafts:'Brouillons',sent:'Envoyés',archive:'Archives',trash:'Corbeille'}[state.folder]||state.folder);render();if(state.selected){const m=state.mails.find(x=>x.ID===state.selected);if(m)openMail(m.ID);else{state.selected=null;reader.innerHTML=`<div class="reader-empty"><img src="brand/icon-256.png"><h2>Sélectionne un courriel</h2><p>Choisis un message pour l’afficher.</p></div>`}}}
+async function load(){const q=document.querySelector('#search').value.trim();const seq=++state.searchSeq;const folder=q?'all':state.folder;const r=await fetch(`/api/mails?folder=${encodeURIComponent(folder)}&q=${encodeURIComponent(q)}&account=${encodeURIComponent(state.activeAccountId||'')}`,{cache:'no-store'});if(seq!==state.searchSeq)return;const data=await r.json();state.mails=(data.mails||[]).map(normalizeMail);state.counts=data.counts||{};document.querySelector('#folder-title').textContent=q?'Recherche':({inbox:'Inbox',important:'Important',drafts:'Brouillons',sent:'Envoyés',archive:'Archives',trash:'Corbeille'}[state.folder]||state.folder);render();if(state.selected){const m=state.mails.find(x=>x.ID===state.selected);if(m)openMail(m.ID);else{state.selected=null;reader.innerHTML=`<div class="reader-empty"><img src="brand/icon-256.png"><h2>Sélectionne un courriel</h2><p>Choisis un message pour l’afficher.</p></div>`}}}
 document.querySelector('#nav').onclick=e=>{const b=e.target.closest('button[data-folder]');if(!b)return;state.folder=b.dataset.folder;state.selected=null;document.querySelector('#search').value='';document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x===b));load()};
 let searchTimer;document.querySelector('#search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(load,180)};
 document.querySelectorAll('.list-tabs button').forEach((b,i)=>b.onclick=()=>{state.filter=['all','unread','attachment'][i];document.querySelectorAll('.list-tabs button').forEach(x=>x.classList.toggle('active',x===b));render()});
@@ -331,8 +332,15 @@ function renderAccounts(){
   host.querySelectorAll('[data-delete-account]').forEach(b=>b.onclick=async()=>{const ok=await showConfirm('Supprimer ce compte ?','Le compte et sa configuration locale seront retirés de PhoenixMail.','Supprimer');if(!ok)return;await fetch('/api/accounts?id='+encodeURIComponent(b.dataset.deleteAccount),{method:'DELETE'});await loadAccounts()});
   document.querySelector('#from-account').innerHTML=state.accounts.map(a=>`<option value="${esc(a.id)}">${esc(a.displayName||a.email)} · ${esc(a.email)}</option>`).join('');
   if(state.activeAccountId && state.accounts.some(a=>a.id===state.activeAccountId)) document.querySelector('#from-account').value=state.activeAccountId; else if(state.defaultAccountId && state.accounts.some(a=>a.id===state.defaultAccountId)){state.activeAccountId=state.defaultAccountId;document.querySelector('#from-account').value=state.activeAccountId}
-  const side=document.querySelector('#sidebar-accounts'); if(side) side.innerHTML=state.accounts.length?state.accounts.map(a=>`<button class="account-row" data-side-account="${esc(a.id)}">${icon('mail')}<span>${esc(a.email)}</span></button>`).join(''):'';
-  side?.querySelectorAll('[data-side-account]').forEach(b=>b.onclick=()=>{state.activeAccountId=b.dataset.sideAccount;document.querySelector('#from-account').value=state.activeAccountId;enterCompose()});
+  const side=document.querySelector('#sidebar-accounts'); if(side) side.innerHTML=state.accounts.length?state.accounts.map(a=>`<button class="account-row ${state.activeAccountId===a.id?'active':''}" data-side-account="${esc(a.id)}" title="Ouvrir la boîte de réception de ${esc(a.email)}">${icon('mail')}<span>${esc(a.email)}</span></button>`).join(''):'';
+  side?.querySelectorAll('[data-side-account]').forEach(b=>b.onclick=async()=>{
+    state.activeAccountId=b.dataset.sideAccount;
+    const from=document.querySelector('#from-account'); if(from)from.value=state.activeAccountId;
+    state.folder='inbox';state.selected=null;document.querySelector('#search').value='';
+    document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.folder==='inbox'));
+    reader.innerHTML=`<div class="reader-empty"><img src="brand/icon-256.png"><h2>Sélectionne un courriel</h2><p>Choisis un message pour l’afficher.</p></div>`;
+    syncAccountSelectionUI();await load();await refreshMailbox(state.activeAccountId);
+  });
 }
 async function loadPhoenixConfig(){
   try{
@@ -396,7 +404,7 @@ document.querySelector('#oauth-connect').onclick=async()=>{
   }catch{document.querySelector('#oauth-connect-status').textContent='Impossible de contacter PhoenixMail.'; btn.disabled=false;}
 };
 document.querySelector('#account-test').onclick=async()=>{const id=document.querySelector('#account-id').value.trim();if(!id){alert('Enregistre d’abord le compte pour le tester.');return}const payload={accountId:id,imap:true,smtp:true,password:document.querySelector('#account-password').value,imapPassword:document.querySelector('#account-password').value};const r=await fetch('/api/accounts/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));document.querySelector('#account-status').textContent=[d.smtp,d.imap].filter(Boolean).join(' · ')||(d.error||'Échec du test')};
-document.querySelector('#from-account').addEventListener('change',e=>{state.activeAccountId=e.target.value});
+// The composer send-account selector is deliberately independent from the mailbox currently being viewed.
 
 async function loadAIManager(){
   try{const r=await fetch('/api/ai/models',{cache:'no-store'});const d=await r.json(); const rec=d.recommended; const found=(d.models||[]).find(m=>m.name===rec.name); document.querySelector('#ai-model-state').textContent=found?'Installé':'Non installé'; document.querySelector('#ai-model-size').textContent=found?formatBytes(found.size):'≈ 429 Mo'; const cfg=d.ai||{};document.querySelector('#ai-endpoint').value=cfg.endpoint||'http://127.0.0.1:8080/v1/chat/completions';document.querySelector('#ai-model').value=cfg.model||'';document.querySelector('#ai-model-path').value=cfg.modelPath||found?.path||'';const dl=d.download||{}; if(dl.state==='downloading'){document.querySelector('#ai-download-progress').hidden=false;const pct=dl.total>0?Math.round(dl.bytes*100/dl.total):0;document.querySelector('#ai-download-bar').style.width=pct+'%';document.querySelector('#ai-download-label').textContent=`Téléchargement ${pct}% · ${formatBytes(dl.bytes)} / ${formatBytes(dl.total)}`;}else{document.querySelector('#ai-download-progress').hidden=true;} document.querySelector('#ai-runtime-status').textContent=(dl.state==='ready'||found)?'Modèle disponible':'Modèle non installé'; document.querySelector('#ai-status').textContent=cfg.modelPath?'Modèle configuré':'Moteur local non configuré';}
@@ -477,20 +485,63 @@ sidebarToggle.onclick=()=>{
   setSidebar(collapsed?'expanded':'collapsed');
 };
 setSidebar(localStorage.getItem('phoenixmail.sidebarMode')||'expanded');
-// Resizable message-list / reader split. The divider behaves like a real desktop mail client.
+// Resizable message-list / reader split. The CSS grid consumes --list-width on this shell.
 const paneResizer=document.querySelector('#pane-resizer');
 const listPanel=document.querySelector('.mail-list-panel');
 const savedListWidth=Number(localStorage.getItem('phoenixmail.listWidth')||468);
-function clampListWidth(v){return Math.max(300,Math.min(760,v));}
-function setListWidth(v,persist=true){const w=clampListWidth(v); document.documentElement.style.setProperty('--list-width',w+'px'); if(persist)localStorage.setItem('phoenixmail.listWidth',String(w));}
+function listWidthBounds(){
+  const shellWidth=mainShell.getBoundingClientRect().width;
+  const sidebarWidth=sidebar.getBoundingClientRect().width;
+  const dividerWidth=8;
+  const minReaderWidth=320;
+  const max=Math.max(300,Math.min(760,Math.floor(shellWidth-sidebarWidth-dividerWidth-minReaderWidth)));
+  return {min:Math.min(300,max),max};
+}
+function clampListWidth(v){const b=listWidthBounds();return Math.max(b.min,Math.min(b.max,Math.round(Number(v)||468)));}
+function setListWidth(v,persist=true){
+  const w=clampListWidth(v);
+  mainShell.style.setProperty('--list-width',w+'px');
+  paneResizer.setAttribute('aria-valuemin',String(listWidthBounds().min));
+  paneResizer.setAttribute('aria-valuemax',String(listWidthBounds().max));
+  paneResizer.setAttribute('aria-valuenow',String(w));
+  if(persist)localStorage.setItem('phoenixmail.listWidth',String(w));
+  return w;
+}
 setListWidth(savedListWidth,false);
 let resizeState=null;
-paneResizer.addEventListener('pointerdown',e=>{resizeState={startX:e.clientX,startWidth:listPanel.getBoundingClientRect().width};paneResizer.setPointerCapture?.(e.pointerId);document.body.classList.add('resizing-panes');});
+paneResizer.addEventListener('pointerdown',e=>{
+  if(window.matchMedia('(max-width: 940px)').matches)return;
+  resizeState={startX:e.clientX,startWidth:listPanel.getBoundingClientRect().width,pointerId:e.pointerId};
+  paneResizer.setPointerCapture?.(e.pointerId);
+  document.body.classList.add('resizing-panes');
+  e.preventDefault();
+});
 paneResizer.addEventListener('pointermove',e=>{if(!resizeState)return;setListWidth(resizeState.startWidth+(e.clientX-resizeState.startX),false)});
-const finishResize=e=>{if(!resizeState)return;setListWidth(listPanel.getBoundingClientRect().width,true);resizeState=null;document.body.classList.remove('resizing-panes');if(e?.pointerId!=null)paneResizer.releasePointerCapture?.(e.pointerId)};
+const finishResize=e=>{
+  if(!resizeState)return;
+  setListWidth(listPanel.getBoundingClientRect().width,true);
+  const pointerId=resizeState.pointerId;
+  resizeState=null;
+  document.body.classList.remove('resizing-panes');
+  try{if(pointerId!=null&&paneResizer.hasPointerCapture?.(pointerId))paneResizer.releasePointerCapture(pointerId)}catch{}
+};
 paneResizer.addEventListener('pointerup',finishResize);
 paneResizer.addEventListener('pointercancel',finishResize);
+paneResizer.addEventListener('lostpointercapture',finishResize);
 paneResizer.addEventListener('dblclick',()=>setListWidth(468));
+paneResizer.addEventListener('keydown',e=>{
+  const current=listPanel.getBoundingClientRect().width;
+  const step=e.shiftKey?40:16;
+  if(e.key==='ArrowLeft'){e.preventDefault();setListWidth(current-step,true)}
+  else if(e.key==='ArrowRight'){e.preventDefault();setListWidth(current+step,true)}
+  else if(e.key==='Home'){e.preventDefault();setListWidth(300,true)}
+  else if(e.key==='End'){e.preventDefault();setListWidth(760,true)}
+});
+window.addEventListener('resize',()=>{
+  if(resizeState)finishResize();
+  const preferred=Number(localStorage.getItem('phoenixmail.listWidth')||468);
+  setListWidth(preferred,false);
+});
 function resetComposeFields(){
   clearTimeout(state.timer);
   state.timer=null;
@@ -638,4 +689,30 @@ sendButton.onclick=async()=>{
     clearTimeout(timeout);setSending(false);
   }
 };
-loadPhoenixConfig(); load(); loadAccounts();
+function syncAccountSelectionUI(){
+  document.querySelectorAll('[data-side-account]').forEach(b=>{
+    const active=b.dataset.sideAccount===state.activeAccountId;
+    b.classList.toggle('active',active);
+    if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+  });
+}
+async function refreshMailbox(accountID=state.activeAccountId){
+  const button=document.querySelector('#refresh-mail'),status=document.querySelector('#sync-status');
+  if(!accountID){status.textContent='Choisis un compte';status.title='Sélectionne un compte courriel avant l’actualisation.';return false}
+  button.disabled=true;button.classList.add('busy');status.dataset.state='busy';status.textContent='Actualisation…';status.title='Connexion au serveur IMAP en cours.';
+  let ok=false;
+  try{
+    const r=await fetch(`/api/accounts/refresh?id=${encodeURIComponent(accountID)}`,{method:'POST',cache:'no-store'});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){status.dataset.state='error';status.textContent='Échec IMAP';status.title=d.error||'Actualisation impossible.';console.error('PhoenixMail IMAP refresh failed:',d.error||r.status);}
+    else{ok=true;status.dataset.state='success';status.textContent=d.newMessages?`+${d.newMessages} nouveau(x)`:'Aucun nouveau';status.title=`${d.account} actualisé : ${d.newMessages} nouveau(x), ${d.fetched} message(s) récupéré(s) depuis le serveur.`;}
+  }catch(err){status.dataset.state='error';status.textContent='Erreur réseau';status.title=err?.message||'Impossible de joindre PhoenixMail.';console.error('PhoenixMail refresh error:',err)}
+  finally{button.disabled=false;button.classList.remove('busy');if(status.dataset.state==='busy')status.dataset.state='';await load();}
+  return ok;
+}
+document.querySelector('#refresh-mail').onclick=()=>refreshMailbox();
+loadPhoenixConfig();
+loadAccounts().then(async()=>{
+  if(!state.activeAccountId)state.activeAccountId=state.defaultAccountId||state.accounts[0]?.id||'';
+  renderAccounts();syncAccountSelectionUI();await load();
+});

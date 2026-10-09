@@ -1,4 +1,4 @@
-# Executables generated locally
+# Locally built binaries
 /bin/*
 
 # Local secrets and environment settings

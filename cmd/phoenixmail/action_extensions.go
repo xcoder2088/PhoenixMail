@@ -155,6 +155,10 @@ func (a *App) accountsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if req.IMAPPassword != "" {
 			a.accountPasswords[id+":imap"] = req.IMAPPassword
+		} else if req.SMTP.Password != "" {
+			// The current account editor uses one password field for providers
+			// that share credentials between IMAP and SMTP.
+			a.accountPasswords[id+":imap"] = req.SMTP.Password
 		}
 		err := a.saveLocked()
 		a.mu.Unlock()

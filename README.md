@@ -15,7 +15,7 @@ PhoenixMail is an open-source, privacy-first desktop mail client with adaptive l
 - IMAP/SMTP first, provider APIs where they improve OAuth/integration
 - No telemetry by default
 
-## V0.2.8 status
+## Current status — v0.3.5 responsive layout candidate
 
 This build keeps the approved PhoenixMail UI while adding real plumbing:
 
@@ -29,12 +29,20 @@ This build keeps the approved PhoenixMail UI while adding real plumbing:
 - SMTP + IMAP connection tests
 - Default sending account selection
 - Real SMTP send path
+- Initial account-scoped IMAP INBOX refresh (up to the latest 40 messages)
+- Real Outlook test observed in the v0.3.4 candidate: 40 messages retrieved and a message body opened
+- Refresh status distinguishes “Aucun nouveau” from IMAP failures
+- Desktop message-list divider with drag/keyboard resizing and a remembered width
+- Fluid message reading area and narrow-screen reader overlay
+- Basic MIME parsing for plain text / HTML and attachment filenames
 - Local AI model manager for Qwen3-0.6B Q4_0 GGUF
 - Optional local llama.cpp server start/stop
 - Approved UI concept stored under `reference/`
 - Official standalone brand kit included
 
 The AI model is downloaded separately; PhoenixMail does not bundle model weights.
+
+**Current IMAP limitations:** this candidate fetches up to the latest 40 messages from INBOX and caches them locally. A real Outlook inbox fetch was observed during manual testing of v0.3.4, but arrival of a newly received message after refresh still needs a deliberate live check. Remote mark-read, move/archive/delete actions, Sent/Drafts folder sync, incremental UIDVALIDITY handling, and attachment download are not complete. Local protocol tests use a controlled IMAP test server; they are not a substitute for each live-provider test.
 
 ## Run
 
@@ -75,7 +83,7 @@ PhoenixMail is intended to be released under **GNU Affero General Public License
 
 ## Microsoft OAuth2 (développement local)
 
-PhoenixMail n'utilise pas le mot de passe pour les comptes Outlook/Microsoft 365 configurés en OAuth2. Le flux local utilise Authorization Code + PKCE et XOAUTH2 pour SMTP. La configuration de développement PhoenixMail utilise maintenant l'application Microsoft PhoenixMail enregistrée pour les tests. Aucun secret client n'est requis. Un autre Client ID peut être fourni par variable d'environnement si nécessaire :
+PhoenixMail n'utilise pas le mot de passe pour les comptes Outlook/Microsoft 365 configurés en OAuth2. Le flux local utilise Authorization Code + PKCE et XOAUTH2 pour SMTP et le premier chemin de synchronisation IMAP. La configuration de développement PhoenixMail utilise maintenant l'application Microsoft PhoenixMail enregistrée pour les tests. Aucun secret client n'est requis. Un autre Client ID peut être fourni par variable d'environnement si nécessaire :
 
 ```bash
 export PHOENIXMAIL_MICROSOFT_CLIENT_ID="VOTRE-CLIENT-ID"
