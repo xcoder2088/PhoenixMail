@@ -1,0 +1,167 @@
+{
+  "version": 2,
+  "mails": [
+    {
+      "id": "1",
+      "from": "Marie Dupont",
+      "email": "marie.dupont@entreprise.com",
+      "to": "moi",
+      "subject": "Réunion de demain",
+      "preview": "Bonjour François, Est-ce que la réunion de demain est toujours confirmée ?",
+      "body": "Bonjour François,\n\nEst-ce que la réunion de demain est toujours confirmée ?\n\nVoici l’ordre du jour :\n\n• Point sur le projet\n• Budget\n• Prochaines étapes\n\nN’hésite pas à me faire savoir si tu as des questions.\n\nMerci,\nMarie",
+      "time": "09:15",
+      "date": "Aujourd’hui",
+      "folder": "inbox",
+      "read": false,
+      "starred": true,
+      "important": true
+    },
+    {
+      "id": "2",
+      "from": "Jean Tremblay",
+      "email": "jean.tremblay@entreprise.com",
+      "to": "moi",
+      "subject": "Facture #8492",
+      "preview": "Voici la facture pour le mois de novembre. N’hésite pas à me contacter.",
+      "body": "Bonjour François,\n\nVoici la facture pour le mois de novembre. N’hésite pas à me contacter si tu as des questions.\n\nJean",
+      "time": "08:42",
+      "date": "Aujourd’hui",
+      "folder": "inbox",
+      "read": false,
+      "starred": true,
+      "important": false,
+      "attachments": [
+        "facture-8492.pdf"
+      ]
+    },
+    {
+      "id": "3",
+      "from": "Service Client",
+      "email": "service@entreprise.com",
+      "to": "moi",
+      "subject": "Confirmation de commande",
+      "preview": "Votre commande #4587 a été expédiée. Vous trouverez les détails ci-dessous.",
+      "body": "Bonjour,\n\nVotre commande #4587 a été expédiée. Vous trouverez les détails dans la pièce jointe.\n\nMerci.",
+      "time": "07:30",
+      "date": "Aujourd’hui",
+      "folder": "inbox",
+      "read": true,
+      "starred": false,
+      "important": false,
+      "attachments": [
+        "commande-4587.pdf"
+      ]
+    },
+    {
+      "id": "4",
+      "from": "Luc Martin",
+      "email": "luc.martin@entreprise.com",
+      "to": "moi",
+      "subject": "Projet PhoenixMail",
+      "preview": "Voici les derniers documents pour le projet PhoenixMail.",
+      "body": "Bonjour François,\n\nVoici les derniers documents pour le projet PhoenixMail.\n\nLuc",
+      "time": "Hier",
+      "date": "Hier",
+      "folder": "inbox",
+      "read": true,
+      "starred": false,
+      "important": true,
+      "attachments": [
+        "phoenixmail-specs.pdf"
+      ]
+    },
+    {
+      "id": "5",
+      "from": "Google",
+      "email": "no-reply@google.com",
+      "to": "moi",
+      "subject": "Alerte de sécurité",
+      "preview": "Nouvelle connexion sur votre compte.",
+      "body": "Une nouvelle connexion à votre compte a été détectée.",
+      "time": "Hier",
+      "date": "Hier",
+      "folder": "inbox",
+      "read": true,
+      "starred": false,
+      "important": false
+    },
+    {
+      "id": "6",
+      "from": "Amazon.ca",
+      "email": "no-reply@amazon.ca",
+      "to": "moi",
+      "subject": "Votre commande a été expédiée",
+      "preview": "Votre colis est en route.",
+      "body": "Votre colis est en route.",
+      "time": "Hier",
+      "date": "Hier",
+      "folder": "inbox",
+      "read": true,
+      "starred": false,
+      "important": false
+    },
+    {
+      "id": "7",
+      "from": "Sophie Roy",
+      "email": "sophie.roy@example.com",
+      "to": "moi",
+      "subject": "Photos du week-end",
+      "preview": "Voici quelques photos de notre sortie…",
+      "body": "Voici quelques photos de notre sortie de samedi.",
+      "time": "Lun.",
+      "date": "Lundi",
+      "folder": "inbox",
+      "read": true,
+      "starred": false,
+      "important": false,
+      "attachments": [
+        "photos.zip"
+      ]
+    },
+    {
+      "id": "8",
+      "from": "Banque Nationale",
+      "email": "avis@bn.example.com",
+      "to": "moi",
+      "subject": "Relevé mensuel",
+      "preview": "Votre relevé du mois de novembre est maintenant disponible.",
+      "body": "Votre relevé mensuel est maintenant disponible.",
+      "time": "Lun.",
+      "date": "Lundi",
+      "folder": "inbox",
+      "read": true,
+      "starred": false,
+      "important": false
+    },
+    {
+      "id": "9",
+      "from": "Pierre Gagnon",
+      "email": "pierre.gagnon@example.com",
+      "to": "moi",
+      "subject": "Souper vendredi ?",
+      "preview": "Ça te tente un souper vendredi soir ?",
+      "body": "Salut François,\n\nÇa te tente un souper vendredi soir ?",
+      "time": "Lun.",
+      "date": "Lundi",
+      "folder": "inbox",
+      "read": true,
+      "starred": false,
+      "important": false
+    },
+    {
+      "id": "10",
+      "from": "Moi",
+      "email": "moi@phoenixmail.local",
+      "to": "jean.tremblay@entreprise.com",
+      "subject": "Projet PhoenixMail",
+      "preview": "Je voulais faire un suivi sur le projet PhoenixMail.",
+      "body": "Bonjour Jean,\n\nJe voulais faire un suivi sur le projet PhoenixMail.\nPeux-tu me confirmer l’avancement et les prochaines étapes ?\n\nMerci !",
+      "time": "10:02",
+      "date": "Aujourd’hui",
+      "folder": "drafts",
+      "read": true,
+      "starred": false,
+      "important": false
+    }
+  ]
+}

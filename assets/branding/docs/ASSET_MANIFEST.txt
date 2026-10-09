@@ -1,0 +1,8 @@
+PhoenixMail Brand Kit
+Generated: 2026-10-06
+
+Primary: Phoenix + envelope emblem
+Tagline: Your Mail. Your AI. Your Control.
+Project license target: AGPL-3.0
+
+Note: current SVG files are embedded-PNG SVG wrappers, not traced vector paths.
